@@ -309,7 +309,6 @@ class Object {
             Math.random() * canvas.height/2 + canvas.height/4 - this.size[1]/2 * CELL_SIZE
         ];
         this.drop();
-        // room.objects.splice(room.objects.indexOf(this), 1);
     }
 }
 
