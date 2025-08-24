@@ -1,3 +1,6 @@
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
 var _sfx = {
     "ringtone": "ring.mp3",
     "narration": "narration/1.mp3",
