@@ -101,6 +101,7 @@ class Cutscene extends Scene {
     
     onenter() {
         dialogueBuffer = this.dialogue;
+        dialogueBuffer.play();
     }
 
     draw() {
@@ -465,8 +466,8 @@ class Suitcase extends Object {
                 let g = this.grabbedInventoryObject;
                 
                 g.inventoryPosition = [
-                    mouse[0] + this.grabOffset[0],
-                    mouse[1] + this.grabOffset[1]
+                    clamp(mouse[0] + this.grabOffset[0], 0, canvas.width - g.size[0] * CELL_SIZE),
+                    clamp(mouse[1] + this.grabOffset[1], 0, canvas.height - g.size[1] * CELL_SIZE)
                 ]
             } else {
                 this.grabbedInventoryObject = null;
@@ -535,7 +536,6 @@ class Dialogue {
 
     constructor(text) {
         this.parse(text);
-        this.play();
     }
 
     parse(text) {
@@ -557,6 +557,7 @@ class Dialogue {
     }
 
     play() {
+        this.phoneRang = false;
         this.playing = true;
         this.boxes = [];
         this.lineIndex = 0;
@@ -567,10 +568,18 @@ class Dialogue {
         let data = this.lines[this.lineIndex];
         for (let i=0; i<this.boxes.length; i++) {
             if (this.boxes[i].closed) continue;
-            if (this.boxes[i].type === data.type || this.lineIndex - i > 2) {
+            if (this.boxes[i].type === data.type || this.lineIndex - i > 1) {
                 this.boxes[i].close();
             }
         }
+        // if (data.type !== "narration" && !this.phoneRang) {
+        //     sfx("ringtone", function() {
+        //         this.boxes.push(new DialogueBox(data.line, data.type));
+        //     }.bind(this));
+        //     this.phoneRang = true;
+        // } else {
+        //     this.boxes.push(new DialogueBox(data.line, data.type));
+        // }
         this.boxes.push(new DialogueBox(data.line, data.type));
     }
 
@@ -618,7 +627,7 @@ class DialogueBox {
         },
         "A": { //auditor
             name: "you",
-            font: "26px 'Times', serif",
+            font: "23px 'Courier', monospace",
             width: 300,
             color: "white"
         },
@@ -759,12 +768,24 @@ class DialogueBox {
                 this.playf += dt;
                 if (this.playf >= duration) {
                     if (this.type !== "narration") {
-                        this.playf = word.match(/[.?!,—]/) ? -300 : 0;
+                        this.playf = 0;
                         this.charIndex += length;
+                        if (word.match(/[.?!,—]/)) {
+                            this.playf = -300;
+                            sfx("j_low");
+                        } else {
+                            sfx("j");
+                        }
                     } else {
                         let char = this.lines[this.lineIndex][this.charIndex];
                         this.charIndex++;
-                        this.playf = char.match(/[.?!,—]/) ? -200 : 0;
+                        this.playf = 0;
+                        if (char.match(/[.?!,—]/)) {
+                            this.playf = -200;
+                            sfx("narration_low");
+                        } else {
+                            sfx("narration");
+                        }
                     }
                     if (this.charIndex >= this.lines[this.lineIndex].length) {
                         this.charIndex = 0;
