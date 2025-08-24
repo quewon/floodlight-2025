@@ -8,6 +8,9 @@
 </head>
 <body>
 
+    <img id="cursorClosed" src="res/cursor_closed.png" style="display: none">
+    <img id="cursorOpen" src="res/cursor_open.png" style="display: none">
+
     <canvas id="debugcanvas" style="display: none"></canvas>
     <canvas id="canvas" width="1920" height="1080"></canvas>
     
@@ -70,16 +73,24 @@
     // init
 
     window.onresize();
-    const rooms = {
+    const scenes = {
         mainmenu: new Room({
             background: "rooms/mainmenu.png",
             objects: [
                 new Door({
                     position: [600, 300],
                     image: "objects/door.png",
-                    link: "test"
+                    link: "intro"
                 })
             ]
+        }),
+        intro: new Cutscene({
+            dialogue: new Dialogue(`J: you getting ready? 
+A: yeah, i'm almost done. 
+this was a lie. i'd just started packing.`),
+            onend: () => {
+                changeScene(scenes.test)
+            }
         }),
         test: new Room({
             background: "rooms/room.png",
@@ -112,24 +123,21 @@ j: yeah, but it's not the same. i'm not trying to tape the beach on my fridge. i
             ]
         })
     }
-    var room = rooms.mainmenu;
     var inventory = [];
     var dialogueBuffer;
 
+    changeScene(scenes.mainmenu);
+
     function draw() {
         context.clearRect(0, 0, canvas.width, canvas.height);
-        room.draw();
+        currentScene.draw();
         if (dialogueBuffer) dialogueBuffer.draw();
 
         if (mousedown) {
-            context.strokeStyle = "red";
+            context.drawImage(cursorClosed, mouse[0] - 25, mouse[1] - 25);
         } else {
-            context.strokeStyle = "black";
+            context.drawImage(cursorOpen, mouse[0] - 25, mouse[1] - 25);
         }
-        context.strokeRect(mouse[0], mouse[1], 40, 40);
-        context.fillStyle = "black";
-        context.font = "20px sans-serif";
-        context.fillText("mouse", mouse[0], mouse[1]);
         
         requestAnimationFrame(draw);
     }
@@ -139,7 +147,7 @@ j: yeah, but it's not the same. i'm not trying to tape the beach on my fridge. i
         const now = new Date();
         const dt = Math.min(now - previousTime, 100);
 
-        room.update(dt);
+        currentScene.update(dt);
         if (dialogueBuffer) dialogueBuffer.update(dt);
 
         requestAnimationFrame(update);

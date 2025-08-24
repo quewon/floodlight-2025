@@ -2,13 +2,30 @@ const DEFAULT_FONT = "italic 26px 'Times', serif";
 const CELL_SIZE = 100;
 const SUITCASE_SIZE = [10, 5];
 
+var currentScene;
 var mapLocked = false;
 
-class Room {
+function changeScene(s) {
+    currentScene = s;
+    currentScene.onenter();
+}
+
+class Scene {
+    constructor() {
+
+    }
+
+    onenter() {
+
+    }
+}
+
+class Room extends Scene {
     screenPosition = 0;
     vsp = 0;
 
     constructor(o) {
+        super();
         this.width = o.width || 1;
         this.objects = o.objects || [];
         this.background = new Image();
@@ -71,6 +88,28 @@ class Room {
             this.vsp += d * dt/1000;
             if (Math.sign(this.screenPosition - this.vsp) !== d)
                 this.vsp = this.screenPosition;
+        }
+    }
+}
+
+class Cutscene extends Scene {
+    constructor(o) {
+        super();
+        this.dialogue = o.dialogue;
+        this.onend = o.onend;
+    }
+    
+    onenter() {
+        dialogueBuffer = this.dialogue;
+    }
+
+    draw() {
+    
+    }
+
+    update() {
+        if (!dialogueBuffer.playing) {
+            this.onend();
         }
     }
 }
@@ -333,7 +372,7 @@ class Door extends Object {
     update() {
         if (!this.loaded) return;
         if (this.hovered() && mouseclicked) {
-            room = rooms[this.link];
+            changeScene(scenes[this.link]);
         }
     }
 }
@@ -371,11 +410,7 @@ class Suitcase extends Object {
         let p = object.inventoryPosition;
         context.strokeStyle = "white";
         context.beginPath();
-        for (let x=0; x<object.size[0]; x++) {
-            for (let y=0; y<object.size[1]; y++) {
-                context.rect(p[0] + x * c, p[1] + y * c, c, c);
-            }
-        }
+        context.rect(p[0], p[1], object.size[0] * c, object.size[1] * c);
         context.stroke();
         context.drawImage(object.image, p[0], p[1]);
     }
@@ -511,9 +546,9 @@ class Dialogue {
 
             let type = 0; // narration
             let split = line.split(':');
-            if (line[1] === ':' && split.length > 1) {
+            if (line[1] == ':' && split.length > 1) {
                 type = split[0].toUpperCase();
-                line = split.slice(1).join('');
+                line = split.slice(1).join('').trim();
             } else {
                 type = "narration";
             }
@@ -532,7 +567,7 @@ class Dialogue {
         let data = this.lines[this.lineIndex];
         for (let i=0; i<this.boxes.length; i++) {
             if (this.boxes[i].closed) continue;
-            if (this.boxes[i].type === data.type || this.lineIndex - i > 1) {
+            if (this.boxes[i].type === data.type || this.lineIndex - i > 2) {
                 this.boxes[i].close();
             }
         }
@@ -636,11 +671,12 @@ class DialogueBox {
         context.font = this.types[this.type].font || this.font;
 
         let width = this.types[this.type].width;
-        let line = this.lines[this.lineIndex].slice(0, this.charIndex);
+        let fullLine = this.lines[this.lineIndex];
+        let line = fullLine.slice(0, this.charIndex);
 
         let mm = context.measureText(line);
         if (this.lines.length == 1)
-            width = Math.min(mm.width, width);
+            width = Math.min(context.measureText(fullLine).width, width);
         let lineHeight = mm.fontBoundingBoxAscent + mm.fontBoundingBoxDescent;
         let height = this.lines.length * lineHeight * smootherstep(this.boxf);
         let p = 20;
