@@ -10,7 +10,16 @@ var _sfx = {
         "j/2.mp3",
         "j/3.mp3",
     ],
-    "j_low": "j/low.mp3"
+    "j_low": "j/low.mp3",
+    "pick": [
+        "pick/1.mp3",
+        "pick/2.mp3",
+        "pick/3.mp3",
+        "pick/4.mp3",
+        "pick/5.mp3",
+        "pick/6.mp3",
+    ],
+    "door": "pick/5.mp3",
 }
 
 loadAudio();

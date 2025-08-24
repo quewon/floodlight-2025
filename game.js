@@ -294,6 +294,7 @@ class Object {
             dialogueBuffer = this.dialogue[this.dialogueIndex];
             dialogueBuffer.play();
         }
+        sfx("pick");
     }
 
     drop() {
@@ -303,6 +304,7 @@ class Object {
         if (this.dialogueIndex >= this.dialogue.length)
             this.dialogueIndex = this.dialogue.length - 1;
         mouseclicked = false;
+        sfx("pick");
     }
 
     onclick() {
@@ -343,6 +345,7 @@ class Object {
 
     action() {
         this.taken = true;
+        sfx("pick");
         inventory.push(this);
         this.inventoryPosition = [
             Math.random() * canvas.width/2 + canvas.width/4 - this.size[0]/2 * CELL_SIZE,
@@ -373,6 +376,7 @@ class Door extends Object {
     update() {
         if (!this.loaded) return;
         if (this.hovered() && mouseclicked) {
+            sfx("door");
             changeScene(scenes[this.link]);
         }
     }
@@ -770,7 +774,7 @@ class DialogueBox {
                     if (this.type !== "narration") {
                         this.playf = 0;
                         this.charIndex += length;
-                        if (word.match(/[.?!,—]/)) {
+                        if (word.match(/[.?!,—:]/)) {
                             this.playf = -300;
                             sfx("j_low");
                         } else {
@@ -780,11 +784,11 @@ class DialogueBox {
                         let char = this.lines[this.lineIndex][this.charIndex];
                         this.charIndex++;
                         this.playf = 0;
-                        if (char.match(/[.?!,—]/)) {
+                        if (char.match(/[.?!,—:]/)) {
                             this.playf = -200;
-                            sfx("narration_low");
+                            // sfx("narration_low");
                         } else {
-                            sfx("narration");
+                            // sfx("narration");
                         }
                     }
                     if (this.charIndex >= this.lines[this.lineIndex].length) {
