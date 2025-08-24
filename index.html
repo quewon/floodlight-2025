@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>the auditor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <canvas id="debugcanvas" style="display: none"></canvas>
+    <canvas id="canvas" width="1920" height="1080"></canvas>
+    
+</body>
+
+<script src="util.js"></script>
+<script src="game.js"></script>
+<script>
+    const context = canvas.getContext("2d");
+    var containerWidth = 0;
+    var containerHeight = 0;
+    var mouse = [-1, -1];
+    var mousedown = false;
+    var mouseclicked = false;
+    var mouserightclicked = false;
+
+    window.onresize = () => {
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let ratio = canvas.width/canvas.height;
+        if (width / height > ratio) {
+            width = height * ratio;
+        } else if (width / height < ratio) {
+            height = width / ratio;
+        }
+        containerWidth = width;
+        containerHeight = height;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+    }
+
+    document.addEventListener("mousemove", e => {
+        mouse[0] = (e.pageX - (window.innerWidth - containerWidth)/2) * canvas.width/containerWidth;
+        mouse[1] = (e.pageY - (window.innerHeight - containerHeight)/2) * canvas.height/containerHeight;
+    })
+
+    document.addEventListener("mousedown", e => {
+        if (e.button === 0)    
+            mousedown = true;
+    })
+
+    document.addEventListener("mouseup", e => {
+        if (e.button === 0)
+            mousedown = false;
+    })
+
+    document.addEventListener("click", () => {
+        mouseclicked = true;
+    })
+
+    document.addEventListener("contextmenu", e => {
+        mouserightclicked = true;
+        e.preventDefault();
+    })
+
+    window.addEventListener("blur", () => {
+        mousedown = false;
+    })
+
+    // init
+
+    window.onresize();
+    const rooms = {
+        mainmenu: new Room({
+            background: "rooms/mainmenu.png",
+            objects: [
+                new Door({
+                    position: [600, 300],
+                    image: "objects/door.png",
+                    link: "test"
+                })
+            ]
+        }),
+        test: new Room({
+            background: "rooms/room.png",
+            width: 3,
+            objects: [
+                new Object({
+                    position: [500, 820],
+                    size: [3, 2],
+                    // name: "unused handgun, loaded",
+                    image: "objects/gun.png",
+                    heldImage: "objects/gun_big.png",
+                    dialogue: [
+                        new Dialogue(`note from quewon: the next dialogue has nothing to do with this gun, but it's here so we can see how the dialogue ui looks :)
+the unyielding presence of the beach was both a blessing and a curse. a reminder that beauty still exists in the bleakest of times—but also that some things are unchanging, ever untouched by the turmoil of those who tread its grounds. the ceaseless march of time, as it were.
+
+j: i wish i'd taken a photo of it. the sunset, i mean. it was the one thing i'd look forward to every evening.
+a: they have postcards of the sunset at the souvenir shop, i think. 
+j: yeah, but it's not the same. i'm not trying to tape the beach on my fridge. i'm trying to retread my steps. my point of view. `), 
+                        new Dialogue("hello")
+                    ]
+                }),
+                new Suitcase({
+                    position: [1920 + 600, 700],
+                    image: "objects/suitcase.png",
+                    dialogue: [
+                        new Dialogue("this is my suitcase :)"),
+                        new Dialogue("gotta put stuff in")
+                    ]
+                })
+            ]
+        })
+    }
+    var room = rooms.mainmenu;
+    var inventory = [];
+    var dialogueBuffer;
+
+    function draw() {
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        room.draw();
+        if (dialogueBuffer) dialogueBuffer.draw();
+
+        if (mousedown) {
+            context.strokeStyle = "red";
+        } else {
+            context.strokeStyle = "black";
+        }
+        context.strokeRect(mouse[0], mouse[1], 40, 40);
+        context.fillStyle = "black";
+        context.font = "20px sans-serif";
+        context.fillText("mouse", mouse[0], mouse[1]);
+        
+        requestAnimationFrame(draw);
+    }
+    
+    var previousTime = new Date();
+    function update() {
+        const now = new Date();
+        const dt = Math.min(now - previousTime, 100);
+
+        room.update(dt);
+        if (dialogueBuffer) dialogueBuffer.update(dt);
+
+        requestAnimationFrame(update);
+        mouseclicked = false;
+        mouserightclicked = false;
+        previousTime = now;
+    }
+
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    draw();
+    update();
+</script>
+</html>
