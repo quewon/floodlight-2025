@@ -1,5 +1,5 @@
 const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
+const audioContext = new AudioContext();
 
 var _sfx = {
     "ringtone": "ring.mp3",
@@ -13,31 +13,39 @@ var _sfx = {
     "j_low": "j/low.mp3"
 }
 
-for (let sound in _sfx) {
-    if (Array.isArray(_sfx[sound])) {
-        let a = [];
-        for (let s of _sfx[sound]) {
-            let audio = new Audio();
-            audio.src = "res/sounds/" + s;
-            a.push(audio);
+loadAudio();
+async function loadAudio() {
+    for (let name in _sfx) {
+        if (Array.isArray(_sfx[name])) {
+            let a = [];
+            for (let path of _sfx[name]) {
+                let buffer = await fetch("res/sounds/" + path)
+                .then(res => res.arrayBuffer())
+                .then(buffer => audioContext.decodeAudioData(buffer))
+                a.push(buffer);
+            }
+            _sfx[name] = a;
+        } else {
+            let path = _sfx[name];
+            let buffer = await fetch("res/sounds/" + path)
+            .then(res => res.arrayBuffer())
+            .then(buffer => audioContext.decodeAudioData(buffer))
+            _sfx[name] = buffer;
         }
-        _sfx[sound] = a;
-    } else {
-        let audio = new Audio();
-        audio.src = "res/sounds/" + _sfx[sound];
-        _sfx[sound] = audio;
     }
 }
 
-function sfx(name, onend) {
-    let sound;
+function sfx(name) {
+    let buffer;
     if (Array.isArray(_sfx[name])) {
         let a = _sfx[name];
-        sound = a[Math.random() * a.length | 0];
+        buffer = a[Math.random() * a.length | 0];
     } else {
-        sound = _sfx[name];
+        buffer = _sfx[name];
     }
-    sound.currentTime = 0;
-    sound.play();
-    sound.onended = onend;
+    if (typeof buffer === "string") return;
+    let source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
 }
