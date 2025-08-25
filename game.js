@@ -128,6 +128,7 @@ class Object {
     taken = false;
     actionLabel = "take";
     candrop = false;
+    inventoryPosition = [0, 0];
 
     constructor(o) {
         this.size = o.size || [1, 1];
@@ -271,7 +272,7 @@ class Object {
     }
 
     hovered() {
-        if (this.taken) return false;
+        if (mapLocked || this.taken) return false;
         
         let width = this.image.naturalWidth;
         let height = this.image.naturalHeight;
@@ -410,28 +411,149 @@ class Suitcase extends Object {
         }
     }
 
+    objectFitPosition(object) {
+        if (object.fitted)
+            return object.inventoryPosition;
+
+        let sw = SUITCASE_SIZE[0] * CELL_SIZE;
+        let sh = SUITCASE_SIZE[1] * CELL_SIZE;
+        let sp = [canvas.width/2 - sw/2, canvas.height/2 - sh/2];
+        let p = [
+            Math.round((object.inventoryPosition[0] - sp[0]) / CELL_SIZE) * CELL_SIZE,
+            Math.round((object.inventoryPosition[1] - sp[1]) / CELL_SIZE) * CELL_SIZE
+        ];
+        let w = object.size[0] * CELL_SIZE;
+        let h = object.size[1] * CELL_SIZE;
+        if (
+            p[0] < 0 || p[0] + w > sw ||
+            p[1] < 0 || p[1] + h > sh
+        ) {
+            return false;
+        }
+
+        for (let compare of inventory) {
+            if (compare === object) continue;
+            let cp = [
+                Math.round((compare.inventoryPosition[0] - sp[0]) / CELL_SIZE) * CELL_SIZE,
+                Math.round((compare.inventoryPosition[1] - sp[1]) / CELL_SIZE) * CELL_SIZE
+            ];
+            let cw = compare.size[0] * CELL_SIZE;
+            let ch = compare.size[1] * CELL_SIZE;
+            if (
+                p[0] + w > cp[0] && p[0] < cp[0] + cw &&
+                p[1] + h > cp[1] && p[1] < cp[1] + ch
+            ) {
+                return false;
+            }
+        }
+        
+        return [
+            p[0] + sp[0],
+            p[1] + sp[1]
+        ];
+    }
+
     drawInventoryObject(object) {
-        var c = CELL_SIZE;
+        let c = CELL_SIZE;
         let p = object.inventoryPosition;
-        context.strokeStyle = "white";
-        context.beginPath();
-        context.rect(p[0], p[1], object.size[0] * c, object.size[1] * c);
-        context.stroke();
-        context.drawImage(object.image, p[0], p[1]);
+        let w = object.size[0] * c;
+        let h = object.size[1] * c;
+        let f = this.objectFitPosition(object);
+
+        if (this.grabbedInventoryObject === object) {
+            if (f) {
+                context.fillStyle = "white";
+                context.globalAlpha = 0.5;
+                context.save();
+                context.translate(f[0] + w/2, f[1] + h/2);
+                context.beginPath();
+                context.rect(-w/2, -h/2, object.size[0] * c, object.size[1] * c);
+                context.fill();
+                context.restore();
+                context.globalAlpha = 1;
+            }
+        }
+
+        context.save();
+            context.translate(p[0] + w/2, p[1] + h/2);
+            if (this.grabbedInventoryObject == object || !object.fitted)
+                context.scale(1.1, 1.1);
+            context.beginPath();
+            context.rect(-w/2, -h/2, object.size[0] * c, object.size[1] * c);
+            if (this.grabbedInventoryObject !== object && object.fitted) {
+                context.globalAlpha = 0.5;
+                context.fillStyle = "white";
+                context.fill();
+                context.globalAlpha = 1;
+            }
+            context.rotate(object.rotation);
+            if (!object.fitted) {
+                object.drawOutline(object.image, -object.image.naturalWidth/2, -object.image.naturalHeight/2, "black");
+            }
+            if (this.objectRemovableFromInventory(object)) {
+                object.drawOutline(object.image, -object.image.naturalWidth/2, -object.image.naturalHeight/2, "red");
+            }
+            context.drawImage(object.image, -object.image.naturalWidth/2, -object.image.naturalHeight/2);
+        context.restore();
     }
 
     rotateInventoryObject(object) {
+        let t = [
+            (mouse[0] - object.inventoryPosition[0]) / (object.size[0] * CELL_SIZE),
+            1 - (mouse[1] - object.inventoryPosition[1]) / (object.size[1] * CELL_SIZE)
+        ];
+        object.inventoryPosition = [
+            mouse[0] - t[1] * (object.size[1] * CELL_SIZE),
+            mouse[1] - t[0] * (object.size[0] * CELL_SIZE)
+        ]
         object.size = [
             object.size[1],
             object.size[0]
+        ]
+        if (!object.rotation)
+            object.rotation = 0;
+        object.rotation += Math.PI/2;
+        if (object.rotation >= 2 * Math.PI) object.rotation = 0;
+        object.fitted = false;
+
+        let f = this.objectFitPosition(object);
+        if (f) {
+            object.inventoryPosition = f;
+            object.fitted = true;
+        }
+    }
+
+    objectRemovableFromInventory(object) {
+        if (object.fitted)
+            return false;
+
+        let sw = SUITCASE_SIZE[0] * CELL_SIZE;
+        let sh = SUITCASE_SIZE[1] * CELL_SIZE;
+        let sp = [canvas.width/2 - sw/2, canvas.height/2 - sh/2];
+        let w = object.image.naturalWidth * 1.1;
+        let h = object.image.naturalHeight * 1.1;
+        if (object.rotation == Math.PI/2 || object.rotation == Math.PI + Math.PI/2) {
+            w = object.image.naturalHeight * 1.1;
+            h = object.image.naturalWidth * 1.1;
+        }
+        let p = [
+            object.inventoryPosition[0] - sp[0] + (object.size[0] * CELL_SIZE)/2 - w/2,
+            object.inventoryPosition[1] - sp[1] + (object.size[1] * CELL_SIZE)/2 - h/2
         ];
-        object.rotation++;
-        if (object.rotation > 3) object.rotation = 0;
+        if (
+            p[0] + w < 0 || p[0] > sw ||
+            p[1] + h < 0 || p[1] > sh
+        ) {
+            return true;
+        }
+
+        return false;
     }
 
     hoveredInventoryObject() {
         var c = CELL_SIZE;
-        for (let object of inventory) {
+        for (let i=inventory.length-1; i>=0; i--) {
+            let object = inventory[i];
             let p = object.inventoryPosition;
             if (
                 mouse[0] >= p[0] && mouse[0] <= p[0] + object.size[0] * c &&
@@ -456,6 +578,9 @@ class Suitcase extends Object {
         
         let ho = this.hoveredInventoryObject();
         if (!this.grabbedInventoryObject && ho && mousedown) {
+            inventory.splice(inventory.indexOf(ho), 1);
+            inventory.push(ho);
+            ho.fitted = false;
             this.grabbedInventoryObject = ho;
             let p = ho.inventoryPosition;
             this.grabOffset = [p[0] - mouse[0], p[1] - mouse[1]];
@@ -474,6 +599,20 @@ class Suitcase extends Object {
                     clamp(mouse[1] + this.grabOffset[1], 0, canvas.height - g.size[1] * CELL_SIZE)
                 ]
             } else {
+                if (this.grabbedInventoryObject) {
+                    let g = this.grabbedInventoryObject;
+                    let f = this.objectFitPosition(g);
+                    if (f) {
+                        g.inventoryPosition = f;
+                        g.fitted = true;
+                    } else if (this.objectRemovableFromInventory(g)) {
+                        inventory.splice(inventory.indexOf(g), 1);
+                        g.taken = false;
+                        g.held = false;
+                        g.heldv = 0;
+                        g.heldf = 0;
+                    }
+                }
                 this.grabbedInventoryObject = null;
             }
         }
